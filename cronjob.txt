@@ -1,0 +1,3 @@
+* * * * * <Path-To-Python> <Path-To-scheduler.py>
+Example
+* * * * *  /usr/bin/python3 /home/user/Projects/Redis-Teams/scheduler.py
