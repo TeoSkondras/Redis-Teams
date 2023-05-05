@@ -40,18 +40,18 @@ cursor.execute(SQL)
 
 # For every meeting ckeck if it is active
 for meeting in cursor:
-    meetind_id = meeting[0]
+    meeting_id = meeting[0]
     order_id = meeting[1]
     start_time = meeting[2]
     end_time = meeting[3] 
     if isNowInTimePeriod(start_time, end_time, now):
         print("Active: " + str(start_time) + " " + str(end_time))
         # and put the: meeting_ID , orderID in the active meetings list in redis
-        r.lpush("active_meetings" , str(meetind_id) + " " + str(order_id) )
+        r.lpush("active_meetings" , str(meeting_id) + " " + str(order_id) )
     else:
-        print("Inactive: " + str(meetind_id) + " " + str(order_id))
+        print("Inactive: " + str(meeting_id) + " " + str(order_id))
 
 
-print("Active instances in redis: " + str(r.lrange("active_meetings" , 0 , 3 )))
+print("Active instances in redis: " + str(r.lrange("active_meetings" , 0 , -1 )))
 
 
