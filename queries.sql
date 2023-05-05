@@ -83,8 +83,8 @@ CREATE TABLE `users_meetings`.`meeting_instances` (
   `fromdatetime` DATETIME NULL,
   `todatetime` DATETIME NULL,
   PRIMARY KEY (`meetingID`, `orderID`),
-  UNIQUE INDEX `meetingID_UNIQUE` (`meetingID` ASC) VISIBLE,
-  UNIQUE INDEX `orderID_UNIQUE` (`orderID` ASC) VISIBLE,
+  INDEX `meetingID_UNIQUE` (`meetingID` ASC) VISIBLE,
+  INDEX `orderID_UNIQUE` (`orderID` ASC) VISIBLE,
   CONSTRAINT `meetingID`
     FOREIGN KEY (`meetingID`)
     REFERENCES `users_meetings`.`meetings` (`meetingID`)
