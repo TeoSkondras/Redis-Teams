@@ -3,11 +3,15 @@ import mysql.connector
 db = mysql.connector.connect(
     host='localhost',
     user='root',
-    password='MYPASS',
+    password='mypass',
     auth_plugin='mysql_native_password',
+    database="users_meetings"
 )
 
 cursor = db.cursor()
 
-cursor.execute("CREATE TABLE Persons ( name VARCHAR(50) )")
-print("Table created")
+cursor.execute("SELECT * FROM users")
+
+
+for row in cursor:
+    print(row)
