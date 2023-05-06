@@ -104,6 +104,7 @@ def is_user_allowed_to_join_meeting(user_id , meeting_id):
                 
 
 # --------- 1: A user joins an active meeting instance ---------
+# KEY: "meetingId:int:orderID:int:participants" VALUE: [userId1 , userId2 , ... ]
 def join_meeting(user_id, meeting_id, order_id):
     # check if the meeting instance the user tries to join is active
     # construct the string to look up
@@ -123,11 +124,27 @@ def join_meeting(user_id, meeting_id, order_id):
             event_id += 1
             update_events_log(event_id , user_id , Event_types.JOIN.value , datetime.datetime.now())
         else:
-            print("User: " +  str(user_id) + " not allowed to join meeting: " + str(meeting_id) ) 
+            print("User: " +  str(user_id) + " not allowed to join meeting: " + str(meeting_id) )
     else:
         print("The meeting the user is trying to join is inactive , please try again")
-        return
 
+
+# --------- 2: A user leaves a meeting instance ---------
+def leave_meeting(user_id, meeting_id, order_id):
+    print("Retriving key...")
+    # retrive the key to check for active meeting participants
+    meeting_instance_id = str(meeting_id) + " " + str(order_id)
+    key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
+    meeting_participants = r.lrange(key , 0 , -1 )
+    # if the user is in the participants list remove him
+    if user_id in meeting_participants:
+        r.lrem(key , 0 , user_id)
+        event_id += 1
+        # update events_log
+        update_events_log(event_id , user_id , Event_types.LEAVE.value , datetime.datetime.now())
+        print("User: " +  str(user_id) + " left meeting instance: " + str(meeting_instance_id) )
+    else:
+        print("Error: User cannot leave a meeting he has not joined")
 
 # --------- 4: Show active meetings ---------
 def show_active_meetings():
