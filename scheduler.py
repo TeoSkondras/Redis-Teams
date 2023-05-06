@@ -52,6 +52,6 @@ for meeting in cursor:
         print("Inactive: " + str(meeting_id) + " " + str(order_id))
 
 
-print("Active instances in redis: " + str(r.lrange("active_meetings" , 0 , -1 )))
+print("Active meeting instances in redis: " + str(r.lrange("active_meetings" , 0 , -1 )))
 
 

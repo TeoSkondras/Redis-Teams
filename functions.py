@@ -52,13 +52,17 @@ def get_meeting_instances_db_db_data():
     for row in cursor_users_meetings:
         meeting_instances_db.append(row)
 
+get_users_db_data()
+get_meetings_db_data()
+
+
 # -------EVENTS LOG UTILS -------
 
 # event_type can be 1 (join_meeting), 2 (leave_meeting), 3 (timeout) 
 class Event_types(Enum):
     JOIN = 1
     LEAVE = 2
-    TIMEOOUT = 3
+    TIMEOUT = 3
 
 # init unique event id to be incremented when updating events log
 event_id = 0
@@ -81,8 +85,6 @@ def purge_redis_data():
 
 # checks if a user is eligable to join a meeting
 def is_user_allowed_to_join_meeting(user_id , meeting_id):
-    #  necessarily load the db meetings data
-    get_meetings_db_data()
     # search for the correct meeting
     for meeting in meetings_db:
         if meeting[0] == meeting_id:
@@ -91,7 +93,6 @@ def is_user_allowed_to_join_meeting(user_id , meeting_id):
                 return True
             else:
                 # else check if the users email is contained in the audience comma separated string
-                get_users_db_data()
                 for user in users_db:
                     if user[0] == user_id:
                         email = user[4]
@@ -100,8 +101,6 @@ def is_user_allowed_to_join_meeting(user_id , meeting_id):
                             return True
                         else:
                             return False 
-
-                
 
 # --------- 1: A user joins an active meeting instance ---------
 # KEY: "meetingId:int:orderID:int:participants" VALUE: [userId1 , userId2 , ... ]
@@ -146,10 +145,26 @@ def leave_meeting(user_id, meeting_id, order_id):
     else:
         print("Error: User cannot leave a meeting he has not joined")
 
+# --------- 3: Show meeting’s current participants ---------
+def show_meeting_participants(meeting_id , order_id):
+    key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
+    meeting_participants_ids = r.lrange(key , 0 , -1 )
+    print(meeting_participants_ids)
+
 # --------- 4: Show active meetings ---------
 def show_active_meetings():
     active_meetings_from_scheduler = r.lrange("active_meetings" , 0 , -1 )
     print("Active meetings in redis: " + str(active_meetings_from_scheduler))
+
+# --------- 5: When a meeting ends, all participants must leave  ---------
+def empty_participants_from_finished_meeting(meeting_id , order_id):
+    key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
+    meeting_participants_ids = r.lrange(key , 0 , -1 )
+    for user_id in meeting_participants_ids:
+        event_id += 1
+        update_events_log(event_id , int(user_id) , Event_types.TIMEOUT.value , datetime.datetime.now())
+    r.delete(key)
+
 
 
 # -------TEST MAIN FUNCTIONS -------
