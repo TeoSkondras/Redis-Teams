@@ -34,23 +34,6 @@ meetings_db = []
 meeting_instances_db = []
 events_log_db = []
 
-# -------EVENTS LOG INIT -------
-
-# event_type can be 1 (join_meeting), 2 (leave_meeting), 3 (timeout) 
-class Event_types(Enum):
-    JOIN = 1
-    LEAVE = 2
-    TIMEOOUT = 3
-
-# init unique event id to be incremented when updating events log
-event_id = 0
-
-
-
-# deletes everything and resets redis data
-def purge_redis_data():
-    r.flushall()
-
 # gets the meetings table from db and fills out the meetings_db list
 def get_meetings_db_data():
     cursor_users_meetings.execute("SELECT * FROM meetings")
@@ -69,11 +52,32 @@ def get_meeting_instances_db_db_data():
     for row in cursor_users_meetings:
         meeting_instances_db.append(row)
 
+# -------EVENTS LOG UTILS -------
+
+# event_type can be 1 (join_meeting), 2 (leave_meeting), 3 (timeout) 
+class Event_types(Enum):
+    JOIN = 1
+    LEAVE = 2
+    TIMEOOUT = 3
+
+# init unique event id to be incremented when updating events log
+event_id = 0
+
+# updates the events_log table to emit a new event
 def update_events_log(event_id, user_id, event_type, timestamp):
     SQL = "INSERT INTO events_log (event_id, userID, event_type, timestamp) VALUES ({event_id}, {userID}, {event_type}, {timestamp})".format(
         event_id=event_id, userId=user_id , event_type=event_type , timestamp=timestamp
     )
     cursor_events_log.execute(SQL)
+
+# -------REDIS UTILS-------
+
+# deletes everything and resets redis data
+def purge_redis_data():
+    r.flushall()
+
+
+# -------MAIN FUNCTIONS -------
 
 # checks if a user is eligable to join a meeting
 def is_user_allowed_to_join_meeting(user_id , meeting_id):
@@ -125,17 +129,12 @@ def join_meeting(user_id, meeting_id, order_id):
         return
 
 
-    
-
-
-
-
-
 # --------- 4: Show active meetings ---------
 def show_active_meetings():
     active_meetings_from_scheduler = r.lrange("active_meetings" , 0 , -1 )
     print("Active meetings in redis: " + str(active_meetings_from_scheduler))
 
 
+# -------TEST MAIN FUNCTIONS -------
 show_active_meetings()
 join_meeting(user_id=1 , meeting_id=1 , order_id=4)
