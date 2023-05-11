@@ -103,7 +103,8 @@ def is_user_allowed_to_join_meeting(user_id , meeting_id):
                             return True
                         else:
                             return False 
-
+                        
+# checks if a user has already joined a meeting
 def is_user_already_in_the_meeting_instance(user_id, meeting_id, order_id):
     key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
     meeting_participants_ids = r.lrange(key , 0 , -1 )
@@ -166,12 +167,14 @@ def leave_meeting(user_id, meeting_id, order_id):
 
 # --------- 3: Show meeting’s current participants ---------
 def show_meeting_participants(meeting_id , order_id):
+    print("Loading meeting's participants....")
     key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
     meeting_participants_ids = r.lrange(key , 0 , -1 )
     print(meeting_participants_ids)
 
 # --------- 4: Show active meetings ---------
 def show_active_meetings():
+    print("Loading active meetings....")
     active_meetings_from_scheduler = r.lrange("active_meetings" , 0 , -1 )
     print("Active meetings in redis: " + str(active_meetings_from_scheduler))
 
@@ -180,20 +183,70 @@ def empty_participants_from_finished_meeting(meeting_id , order_id):
     key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":participants"
     meeting_participants_ids = r.lrange(key , 0 , -1 )
     event_id = int(r.get('currentEventID'))
+    print("Removing meeting's participants....")
     for user_id in meeting_participants_ids:
         event_id += 1
         r.set('currentEventID',event_id)
         update_events_log(event_id , int(user_id) , Event_types.TIMEOUT.value , datetime.datetime.now())
     r.delete(key)
 
+# --------- 6: A user posts a chat message ---------
+# we suppose that a comment belongs to a meeting instance, not a meeting in general
+def post_message(user_id, meeting_id, order_id, message): 
+    #first check if the user is eligible to post a chat message
+    if is_user_allowed_to_join_meeting(user_id,meeting_id):
+        meeting_instance_id = str(meeting_id) + " " + str(order_id)
+        # first put the message on the meeting's chat list 
+        key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":messages"
+        value = str(message)
+        print(key+" "+value)
+        r.rpush(key , value)
+        # then put the message on the user's meetings' chat list
+        key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":userID:" + str(user_id) + ":messages"
+        value = str(message)
+        r.rpush(key , value)
+        print("User: " +  str(user_id) + " just commented on the meeting instance: " + str(meeting_instance_id) + ": " + str(message))
+    else:
+        print("User: " +  str(user_id) + " does not have the right to comment in meeting: " + str(meeting_id))
+
+# --------- 7: Show meeting’s chat messages in chronological order (the oldest comes first) ---------
+def show_meeting_messages_chronologically(meeting_id, order_id):
+    print("Fetching meeting's messages....")
+    key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":messages"
+    meeting_chat_messages = r.lrange(key , 0, -1 )
+    print(meeting_chat_messages)
+
+# --------- 8: Show for an active meeting and a user his/her chat messages ---------
+def show_active_meeting_messages_of_user(user_id ,meeting_id, order_id):
+    print("Trying to fetch meeting's user messages...")
+    active_meetings_from_scheduler = r.lrange("active_meetings" , 0 , -1 )
+    meeting_instance_id = str(meeting_id) + " " + str(order_id)
+    if meeting_instance_id in active_meetings_from_scheduler:
+        key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":userID:" + str(user_id) + ":messages"
+        meeting_user_chat_messages = r.lrange(key , 0, -1 )
+        if len(meeting_user_chat_messages)==0:
+            print("The user:" + str(user_id) + " has not left any comments in the meeting:" + meeting_instance_id + " ...")
+        else:    
+            print(meeting_user_chat_messages)
+    else:
+        print("Meeting Is not active!" + str(active_meetings_from_scheduler))
+
 
 # -------TEST MAIN FUNCTIONS -------
-initialize_event_id()
-show_active_meetings()
-show_meeting_participants(1,1)
-join_meeting(user_id=1 , meeting_id=1 , order_id=1)
-join_meeting(user_id=2 , meeting_id=1 , order_id=1)
-join_meeting(user_id=3 , meeting_id=1 , order_id=1)
-leave_meeting(user_id=1 , meeting_id=1 , order_id=1)
-empty_participants_from_finished_meeting(1,1)
-show_meeting_participants(1,1)
+#initialize_event_id()
+#show_active_meetings()
+#show_meeting_participants(1,1)
+#join_meeting(user_id=1 , meeting_id=1 , order_id=1)
+#join_meeting(user_id=2 , meeting_id=1 , order_id=1)
+#join_meeting(user_id=3 , meeting_id=1 , order_id=1)
+#leave_meeting(user_id=1 , meeting_id=1 , order_id=1)
+#empty_participants_from_finished_meeting(1,1)
+#show_meeting_participants(1,1)
+#r.delete("meetingId:1:orderId:1:messages")
+#r.delete("meetingId:1:orderId:1:userID:1:messages")
+#r.delete("meetingId:1:orderId:1:userID:2:messages")
+#post_message(1,1,1,"hello redis")
+#post_message(2,1,1,"goodbye redis")
+show_meeting_messages_chronologically(1,1)
+show_active_meeting_messages_of_user(1,1,1)
+show_active_meeting_messages_of_user(1,10,1)
