@@ -49,6 +49,7 @@ $ sudo snap install redis
 
 ### Before you start
 You need to create the schema shown below with the test data and start the scheduler.
+<img src="https://github.com/TeoSkondras/Redis-Teams/blob/main/images/schema.png" height="370"/>
 
 1.Create schema and add test data
 In the terminal connect to the mysql local instance and enter your password
@@ -99,7 +100,18 @@ is allowed, i.e. his email is in audience (eventsLog is updated)
 
 ### [**Results**](#) <a name="results"></a>
 After running the output should be something like this
+<br/>
 **Note that since meetings are activated and deactivated all the time your output might differ.**
+<img src="https://github.com/TeoSkondras/Redis-Teams/blob/main/images/output.png" height="750"/>
+<br/>
+To test the scheduler is working you can try
+``` shell
+$ python scheduler.py
+```
+<br/>
+And get an output similar to this.
+<img src="https://github.com/TeoSkondras/Redis-Teams/blob/main/images/output_scheduler.png" height="400"/>
+
 
 ### [**Notes**](#) <a name="notes"></a>
 This project was made as an assignement of the Big Data Management Systems course at DMST AUEB.
