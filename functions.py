@@ -5,16 +5,18 @@ import redis
 
 # Init connections with dbs and redis
 db_users_meetings = mysql.connector.connect(
-    host='127.0.0.1',
-    user='localhostusername',
-    password='password',
+    host='localhost',
+    user='root',
+    password='mypass',
+    auth_plugin='mysql_native_password',
     database="users_meetings"
 )
 
 db_events_log = mysql.connector.connect(
-    host='127.0.0.1',
-    user='localhostusername',
-    password='password',
+    host='localhost',
+    user='root',
+    password='mypass',
+    auth_plugin='mysql_native_password',
     database="events_log"
 )
 
