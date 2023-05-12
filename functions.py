@@ -6,15 +6,15 @@ import redis
 # Init connections with dbs and redis
 db_users_meetings = mysql.connector.connect(
     host='127.0.0.1',
-    user='theodorosskondrasmexis',
-    password='2104517046As',
+    user='localhostusername',
+    password='password',
     database="users_meetings"
 )
 
 db_events_log = mysql.connector.connect(
     host='127.0.0.1',
-    user='theodorosskondrasmexis',
-    password='2104517046As',
+    user='localhostusername',
+    password='password',
     database="events_log"
 )
 
