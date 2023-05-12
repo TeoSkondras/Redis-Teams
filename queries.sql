@@ -95,9 +95,9 @@ CREATE TABLE `users_meetings`.`meeting_instances` (
 INSERT INTO meeting_instances (meetingID, orderID, fromdatetime, todatetime)
 VALUES 
   -- Meeting 1
-  (1, 1, '2023-05-10 09:00:00', '2023-05-10 11:30:00'),
-  (1, 2, '2023-05-10 13:00:00', '2023-05-10 15:30:00'),
-  (1, 3, '2023-05-10 17:00:00', '2023-05-10 19:30:00'),
+  (1, 1, '2023-05-10 09:00:00', '2023-09-10 11:30:00'),
+  (1, 2, '2023-05-10 13:00:00', '2023-09-10 15:30:00'),
+  (1, 3, '2023-05-10 17:00:00', '2023-05-30 19:30:00'),
     -- Meeting 2
   (2, 1, '2023-05-11 09:00:00', '2023-05-11 11:30:00'),
   (2, 2, '2023-05-11 14:00:00', '2023-05-11 16:00:00'),
@@ -123,7 +123,7 @@ use events_log;
 CREATE TABLE `events_log`.`events_log` (
   `event_id` INT NOT NULL,
   `userID` INT NOT NULL,
-  `event_type` VARCHAR(45) NULL,
+  `event_type` VARCHAR(5) NULL,
   `timestamp` DATETIME NULL,
   PRIMARY KEY (`event_id`),
   UNIQUE INDEX `event_id_UNIQUE` (`event_id` ASC) VISIBLE);

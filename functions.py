@@ -1,23 +1,20 @@
 from enum import Enum
-import time
 import mysql.connector
 import datetime
 import redis
 
 # Init connections with dbs and redis
 db_users_meetings = mysql.connector.connect(
-    host='localhost',
-    user='root',
-    password='mypass', # Replace with mysql password
-    auth_plugin='mysql_native_password',
+    host='127.0.0.1',
+    user='theodorosskondrasmexis',
+    password='2104517046As',
     database="users_meetings"
 )
 
 db_events_log = mysql.connector.connect(
-    host='localhost',
-    user='root',
-    password='9k"eAf|8', # Replace with mysql password
-    auth_plugin='mysql_native_password',
+    host='127.0.0.1',
+    user='theodorosskondrasmexis',
+    password='2104517046As',
     database="events_log"
 )
 
@@ -65,9 +62,6 @@ class Event_types(Enum):
     LEAVE = 2
     TIMEOUT = 3
 
-# init unique event id to be incremented when updating events log
-event_id = 0
-
 # updates the events_log table to emit a new event
 def update_events_log(event_id, user_id, event_type, timestamp):
     SQL = "INSERT INTO events_log (event_id, userID, event_type, timestamp) VALUES ({event_id}, {userID}, {event_type}, NOW())".format(
@@ -81,7 +75,6 @@ def update_events_log(event_id, user_id, event_type, timestamp):
 # deletes everything and resets redis data
 def purge_redis_data():
     r.flushall()
-
 
 # -------MAIN FUNCTIONS -------
 
@@ -112,6 +105,7 @@ def is_user_already_in_the_meeting_instance(user_id, meeting_id, order_id):
     if str(user_id) in meeting_participants_ids:
         return True
 
+# initializes the eventId in redis in order to use it for the events_log db inserts
 def initialize_event_id():
     r.set('currentEventID',0)
 
@@ -166,10 +160,14 @@ def leave_meeting(user_id, meeting_id, order_id):
     event_id = int(r.get('currentEventID'))
     # if the user is in the participants list remove him
     if str(user_id) in meeting_participants:
+        # remove the user from the participants list
         r.lrem(key , 0 , user_id)
+        # remove the key-value pair containing the join timestamp of the user for the meeting
+        key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":userId:" + str(user_id) + ":joinTimestamp"
+        r.delete(key)
+        # update events_log
         event_id += 1
         r.set('currentEventID',event_id)
-        # update events_log
         update_events_log(event_id , user_id , Event_types.LEAVE.value , datetime.datetime.now())
         print("User: " +  str(user_id) + " left meeting instance: " + str(meeting_instance_id) + "\n")
     else:
@@ -203,7 +201,7 @@ def empty_participants_from_finished_meeting(meeting_id , order_id):
     r.delete(key)
 
 # --------- 6: A user posts a chat message ---------
-# we suppose that a comment belongs to a meeting instance, not a meeting in general
+# Hypothesis: suppose that a comment belongs to a meeting instance, not a meeting in general
 def post_message(user_id, meeting_id, order_id, message): 
     #first check if the user is eligible to post a chat message
     if is_user_allowed_to_join_meeting(user_id,meeting_id):
@@ -211,7 +209,7 @@ def post_message(user_id, meeting_id, order_id, message):
         # first put the message on the meeting's chat list 
         key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":messages"
         value = str(message)
-        print(key+" "+value)
+        #print(key+" "+value)
         r.rpush(key , value)
         # then put the message on the user's meetings' chat list
         key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":userID:" + str(user_id) + ":messages"
@@ -225,12 +223,13 @@ def post_message(user_id, meeting_id, order_id, message):
 def show_meeting_messages_chronologically(meeting_id, order_id):
     print("Fetching meeting's messages....")
     key = "meetingId:" + str(meeting_id) + ":orderId:" + str(order_id) + ":messages"
+    # because the chat messages are inserted with rpush, the earliest one will apear first, the latest one will be in the end...
     meeting_chat_messages = r.lrange(key , 0, -1 )
     print(meeting_chat_messages)
     print()
 
 # --------- 8: Show for each active meeting when (timestamp) current participants joined ---------
-# suppose that the timestamp is held for the meeting instance, not for the meeting as a whole.
+# Hypothesis: suppose that the timestamp is held for the meeting instance, not for the meeting as a whole.
 def show_all_meetings_current_users_join_timestamp():
     # get all the active meetings
     active_meetings_from_scheduler = r.lrange("active_meetings" , 0 , -1 )
@@ -238,9 +237,10 @@ def show_all_meetings_current_users_join_timestamp():
         print("Fetching current users' join timestamps for the meeting instance: " + meeting_instance_id + "....")
         meeting_instance_details = meeting_instance_id.split(" ")
         meeting_participants = show_meeting_participants(meeting_instance_details[0],meeting_instance_details[1])
-        meeting_instance_id_converted = "meetingId:" + meeting_instance_details[0] + ":orderId:" + meeting_instance_details[1]
+        key = "meetingId:" + meeting_instance_details[0] + ":orderId:" + meeting_instance_details[1]
         for i in range(len(meeting_participants)):
-            user_join_timestamp = r.get(meeting_instance_id_converted + ":userId:" + str(meeting_participants[i]) + ":joinTimestamp")
+            key = "meetingId:" + meeting_instance_details[0] + ":orderId:" + meeting_instance_details[1] + ":userId:" + str(meeting_participants[i]) + ":joinTimestamp"
+            user_join_timestamp = r.get(key)
             print("User:" + meeting_participants[i] + " joined the meeting instance:" + meeting_instance_id + " at:" + user_join_timestamp)
     print("\n")        
 
@@ -263,23 +263,33 @@ def show_active_meeting_messages_of_user(user_id ,meeting_id, order_id):
 
 
 # -------TEST MAIN FUNCTIONS -------
-#initialize_event_id()
-r.delete("meetingId:1:orderId:1:currentUsersJoinTimeStamps")
-empty_participants_from_finished_meeting(1,1)
+# Note1: The commented out commands are there to use them in case you want to run the script multiple times, in order to clean up previous actions!
+# Note2: Please use the initialize_event_id() function ONCE! Otherwise it will try to insert duplicate eventIds causing Primary key constrain breaks
+
+initialize_event_id()
+#r.delete("meetingId:1:orderId:1:currentUsersJoinTimeStamps")
+
 show_active_meetings()
+
 meeting_participants = show_meeting_participants(1,1)
 meeting_participants = show_meeting_participants(1,2)
+
 join_meeting(user_id=1 , meeting_id=1 , order_id=1)
 join_meeting(user_id=2 , meeting_id=1 , order_id=1)
 join_meeting(user_id=3 , meeting_id=1 , order_id=1)
 leave_meeting(user_id=1 , meeting_id=1 , order_id=1)
 meeting_participants = show_meeting_participants(1,1)
-r.delete("meetingId:1:orderId:1:messages")
-r.delete("meetingId:1:orderId:1:userID:2:messages")
-r.delete("meetingId:1:orderId:1:userID:3:messages")
+
+#r.delete("meetingId:1:orderId:1:messages")
+#r.delete("meetingId:1:orderId:1:userID:2:messages")
+#r.delete("meetingId:1:orderId:1:userID:3:messages")
+
 post_message(2,1,1,"hello redis")
 post_message(3,1,1,"goodbye redis")
 show_meeting_messages_chronologically(1,1)
 show_active_meeting_messages_of_user(2,1,1)
 show_active_meeting_messages_of_user(1,10,1)
+
 show_all_meetings_current_users_join_timestamp()
+
+empty_participants_from_finished_meeting(1,1)
